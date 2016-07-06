@@ -115,13 +115,15 @@
 
         k += (k < audioArray.length ? 1 : 0);
 
-        if (particle.scale.y > 22) {
+        if (particle.scale.y > 22 || particle.scale.x > 22) {
            particle.material.color.setHex(0xf00808);
          }
-         else if(particle.scale.y <= 22 && particle.scale.y > 18){
+         else if(particle.scale.y <= 22 && particle.scale.y > 18
+         || particle.scale.x <= 22 && particle.scale.x > 18){
            particle.material.color.setHex(0x0000ff);
          }
-         else if(particle.scale.y <= 18 && particle.scale.y > 2){
+         else if(particle.scale.y <= 18 && particle.scale.y > 2
+         || particle.scale.x <= 18 && particle.scale.x > 2){
            particle.material.color.setHex(0xff00ff);
          }
          else {

@@ -1,58 +1,73 @@
 
   // the main three.js components
-  var camera;
+  var camera, cameraOrtho, player;
   var scene = new THREE.Scene();
+  // alpha sets background transparent
   var renderer = new THREE.WebGLRenderer({ alpha: true });
   var faces = ['cards/100.jpg', 'cards/101.jpg', 'cards/102.jpg', 'cards/103.jpg', 'cards/104.jpg', 'cards/105.jpg', 'cards/106.jpg', 'cards/107.jpg', 'cards/108.jpg', 'cards/109.jpg', 'cards/110.jpg'];
 
-  // keep track of the mouse position
-  // var mouseX = 0;
-  // var mouseY = 0;
+  var TO_RADIANS = Math.PI / 180;
+  var mouse2d = new THREE.Vector2();
+
+  var viewportWidth = window.innerWidth;
+  var viewportHeight = window.innerHeight;
 
   // an array to store out cards in
   var cards = [];
+
+  document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 
   init();
 
   function init() {
     // camera params:
     // field of view, aspect ratio for render output, near and far clipping plane
-    camera = new THREE.PerspectiveCamera(80, window.innerWidth/window.innerHeight, 1, 4000);
+    camera = new THREE.PerspectiveCamera(80, window.innerWidth/window.innerHeight, 0.1, 4000);
 
     // move the camera backwards so we can see stuff
     // default position is 0,0,0
     camera.position.z = 1000;
-
-    // scene contains all the 3d object data
     scene.add(camera);
+    camera.lookAt(scene.position);
+
+    var light = new THREE.AmbientLight(0xffffff);
+    scene.add(light);
+
+    var directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    directionalLight.position.set(0, 1, 1);
+    scene.add(directionalLight);
+
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    directionalLight.position.set(1, 1, 0);
+    scene.add(directionalLight);
+
+
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    directionalLight.position.set(0, -1, -1);
+    scene.add(directionalLight);
+
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    directionalLight.position.set(-1, -1, 0);
+    scene.add(directionalLight);
+
+    // player
+    var geometry = new THREE.BoxGeometry(5, 5, 5);
+
+    player = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial({
+      color: 0xffffff
+      })
+    );
+    player.scale.x = player.scale.y = player.scale.z = 5;
+
+    player.position.z = 875;
+    scene.add( player );
 
     // the renderer's canvas dom element is added to the body
-    document.body.appendChild(renderer.domElement);
 
+    document.body.appendChild(renderer.domElement);
+    console.log(player.position);
     makeCards();
   }
-
-  var light = new THREE.AmbientLight(0xffffff);
-  scene.add(light);
-
-  var directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
-  directionalLight.position.set(0, 1, 1);
-  scene.add(directionalLight);
-
-  directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
-  directionalLight.position.set(1, 1, 0);
-  scene.add(directionalLight);
-
-
-  directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
-  directionalLight.position.set(0, -1, -1);
-  scene.add(directionalLight);
-
-  directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
-  directionalLight.position.set(-1, -1, 0);
-  scene.add(directionalLight);
-
-  camera.position.z = 50;
 
   // creates a random field of card objects
   function makeCards() {
@@ -70,7 +85,7 @@
           material = new THREE.MeshBasicMaterial();
           material.map = texture;
           // make the card
-           var geometry = new THREE.PlaneGeometry(5, 5, 1);
+           var geometry = new THREE.BoxGeometry(5, 8, 0.3);
 
            card = new THREE.Mesh(geometry, material);
 
@@ -81,8 +96,8 @@
           // set its z position
           card.position.z = zPos;
 
-          // scale it up a btn-info-outline
-          card.scale.x = card.scale.y = 10;
+          // scale it up a bit
+          card.scale.x = card.scale.y = card.scale.z = 8;
 
           // add it to the scene
           scene.add(card);
@@ -116,6 +131,16 @@
 
         k += (k < audioArray.length ? 1 : 0);
 
+        var cardBB = new THREE.Box3();
+        cardBB.setFromObject(card);
+
+        var playerBB = new THREE.Box3();
+        playerBB.setFromObject(player);
+
+        if (cardBB.intersectsBox(playerBB)) {
+          console.log('collision');
+        }
+
         // if (card.scale.y > 22 || card.scale.x > 22) {
         //    card.material.color.setHex(0xf00808);
         //  }
@@ -140,9 +165,50 @@
         }
       }
     }
-      requestAnimationFrame(updateCards);
-      // render the scene from the perspective of the camera
-      renderer.render(scene, camera);
+    var toRotX = (mouse2d.y * 30) * TO_RADIANS;
+    var toRotY = ( mouse2d.x * - 30) * TO_RADIANS;
+    camera.rotation.x += (toRotX - camera.rotation.x);
+    camera.rotation.y += (toRotY - camera.rotation.y);
+    requestAnimationFrame(updateCards);
+
+    // render the scene from the perspective of the camera
+    renderer.render(scene, camera);
+  }
+
+  function onDocumentMouseMove(event) {
+    event.preventDefault();
+
+  	mouse2d.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+  	mouse2d.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+    var vector = new THREE.Vector3(mouse2d.x, mouse2d.y, 0.5);
+    vector.unproject( camera );
+    var dir = vector.sub( camera.position ).normalize();
+    var distance = - camera.position.z / dir.z;
+    var pos = camera.position.clone().add( dir.multiplyScalar( distance ) );
+
+    if (pos.x > 500) {
+      pos.x = 500;
+    }
+    else if (pos.x < -500) {
+      pos.x = -500;
+    }
+    else {
+      player.position.x = pos.x;
+    }
+
+    if (pos.y > 500) {
+      pos.y = 500;
+    }
+    else if (pos.y < -500) {
+      pos.y = -500;
+    }
+    else {
+      player.position.y = pos.y;
+    }
+
+    player.position.z = 875;
+
   }
 
   updateCards();

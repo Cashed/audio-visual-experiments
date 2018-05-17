@@ -9,6 +9,7 @@ var url = 'Tessellate.m4a';
 try {
   if (typeof AudioContext === 'function') {
     context = new AudioContext();
+    context.resume();
   }
 }
 catch(e) {
